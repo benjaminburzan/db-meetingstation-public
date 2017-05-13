@@ -279,7 +279,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return weighting;
     }
 
-    private PathWrapper parseSolutionIntoPath(Instant initialTime, boolean arriveBy, PtFlagEncoder encoder, Translation tr, QueryGraph queryGraph, PtTravelTimeWeighting weighting, Label solution, PointList waypoints) {
+    PathWrapper parseSolutionIntoPath(Instant initialTime, boolean arriveBy, PtFlagEncoder encoder, Translation tr, Graph queryGraph, PtTravelTimeWeighting weighting, Label solution, PointList waypoints) {
         PathWrapper path = new PathWrapper();
 
         List<Label.Transition> transitions = new ArrayList<>();
@@ -337,7 +337,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return path;
     }
 
-    private List<List<Label.Transition>> getPartitions(List<Label.Transition> transitions) {
+    List<List<Label.Transition>> getPartitions(List<Label.Transition> transitions) {
         List<List<Label.Transition>> partitions = new ArrayList<>();
         partitions.add(new ArrayList<>());
         final Iterator<Label.Transition> iterator = transitions.iterator();
@@ -355,7 +355,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return partitions;
     }
 
-    private List<Trip.Leg> getLegs(PtFlagEncoder encoder, Translation tr, QueryGraph queryGraph, PtTravelTimeWeighting weighting, List<List<Label.Transition>> partitions) {
+    List<Trip.Leg> getLegs(PtFlagEncoder encoder, Translation tr, Graph queryGraph, PtTravelTimeWeighting weighting, List<List<Label.Transition>> partitions) {
         return partitions.stream().flatMap(partition -> parsePathIntoLegs(partition, queryGraph, encoder, weighting, tr).stream()).collect(Collectors.toList());
     }
 

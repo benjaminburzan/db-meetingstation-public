@@ -79,6 +79,10 @@ public class Trip {
             this.stops = stops;
         }
 
+        public String toString() {
+            return trip_headsign;
+        }
+
     }
 
 }

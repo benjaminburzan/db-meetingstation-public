@@ -26,12 +26,17 @@ import com.graphhopper.gtfs.fare.FixedFareAttributeLoader;
 import com.graphhopper.storage.Directory;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.GraphExtension;
-import org.mapdb.*;
+import org.mapdb.Bind;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.ZipFile;
@@ -98,6 +103,8 @@ public class GtfsStorage implements GraphExtension {
 	private Map<String, Fare> fares;
 	private Map<GtfsRealtime.TripDescriptor, int[]> boardEdgesForTrip;
 	private Map<GtfsRealtime.TripDescriptor, int[]> leaveEdgesForTrip;
+
+	private Map<String, Integer> stationNodes;
 
 	enum EdgeType {
 		HIGHWAY, ENTER_TIME_EXPANDED_NETWORK, LEAVE_TIME_EXPANDED_NETWORK, ENTER_PT, EXIT_PT, HOP, DWELL, BOARD, ALIGHT, OVERNIGHT, TRANSFER, WAIT
@@ -189,6 +196,7 @@ public class GtfsStorage implements GraphExtension {
 		this.fares = data.getTreeMap("fares");
 		this.boardEdgesForTrip = data.getHashMap("boardEdgesForTrip");
 		this.leaveEdgesForTrip = data.getHashMap("leaveEdgesForTrip");
+		this.stationNodes = data.getHashMap("stationNodes");
 	}
 
 	void loadGtfsFromFile(String id, ZipFile zip) {
@@ -278,6 +286,10 @@ public class GtfsStorage implements GraphExtension {
 
 	Map<String, GTFSFeed> getGtfsFeeds() {
 		return Collections.unmodifiableMap(gtfsFeeds);
+	}
+
+	Map<String, Integer> getStationNodes() {
+		return stationNodes;
 	}
 
 }
