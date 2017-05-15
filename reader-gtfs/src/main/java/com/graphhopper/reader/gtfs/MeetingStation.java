@@ -28,7 +28,10 @@ import com.graphhopper.util.Translation;
 import com.graphhopper.util.TranslationMap;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.graphhopper.reader.gtfs.Label.reverseEdges;
 
@@ -50,18 +53,42 @@ public class MeetingStation {
         System.out.println(db.stops.size());
         db.stops.forEach((id, stop) -> System.out.printf("[%s] %s\n", id, stop.stop_name));
 
-        int a = gtfsStorage.getStationNodes().get("8000237");
-        int b = gtfsStorage.getStationNodes().get("8000238");
+        Map<Integer, String> mapInversed =
+                gtfsStorage.getStationNodes().entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
-        final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
-        final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, 10000);
-        final Translation translation = translationMap.getWithFallBack(Locale.GERMAN);
+        int[] sources = new int[] {
+            gtfsStorage.getStationNodes().get("8503000"),
+                gtfsStorage.getStationNodes().get("8011160"),
 
-        final Set<Label> labels = router.calcPaths(a, Collections.singleton(b), Instant.now(), Instant.now());
-        labels.forEach(label -> {
-            final List<Trip.Leg> legs = getLegs(ptFlagEncoder, graphHopperStorage, graphHopper, weighting, translation, label);
 
-            System.out.println(legs.toString());
+
+        };
+
+        Arrays.stream(sources)
+                .mapToObj(source -> {
+                    final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
+                    final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE);
+                    final Translation translation = translationMap.getWithFallBack(Locale.GERMAN);
+
+                    final Set<Label> labels = router.calcPaths(source, Collections.emptySet(), Instant.now().minus(10, ChronoUnit.HOURS), Instant.now().minus(10, ChronoUnit.HOURS));
+                    labels.forEach(label -> {
+                        final List<Trip.Leg> legs = getLegs(ptFlagEncoder, graphHopperStorage, graphHopper, weighting, translation, label);
+
+                        System.out.println(legs.toString());
+                    });
+                    System.out.println(router.getVisitedNodes());
+                    return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
+                }).reduce(new HashMap<Integer, Long>(), (m, n) -> {
+            final HashMap<Integer, Long> stringIntegerHashMap = new HashMap<>();
+            m.forEach((k, v) -> stringIntegerHashMap.merge(k, v, (v1, v2) -> v1 + v2));
+            n.forEach((k, v) -> stringIntegerHashMap.merge(k, v, (v1, v2) -> v1 + v2));
+            return stringIntegerHashMap;
+        }).entrySet().stream().filter(e -> mapInversed.containsKey(e.getKey()))
+                .sorted(Comparator.comparingLong(Map.Entry::getValue))
+                .limit(10).forEach(e -> {
+            System.out.println(db.stops.get(mapInversed.get(e.getKey())).stop_name);
         });
 
 

@@ -38,7 +38,7 @@ class MultiCriteriaLabelSetting {
 
     private final PtFlagEncoder flagEncoder;
     private final PtTravelTimeWeighting weighting;
-    private final SetMultimap<Integer, Label> fromMap;
+    final SetMultimap<Integer, Label> fromMap;
     private final PriorityQueue<Label> fromHeap;
     private final int maxVisitedNodes;
     private final boolean reverse;
@@ -111,7 +111,7 @@ class MultiCriteriaLabelSetting {
                         isTryingToReEnterPtAfterTransferWalking ? 1 : (label.walkDistanceOnCurrentLeg <= maxWalkDistancePerLeg && walkDistanceOnCurrentLeg > maxWalkDistancePerLeg ? 1 : 0)));
                 Set<Label> sptEntries = fromMap.get(edge.getAdjNode());
                 Label nEdge = new Label(nextTime, edge.getEdge(), edge.getAdjNode(), nTransfers, nWalkDistanceConstraintViolations, walkDistanceOnCurrentLeg, firstPtDepartureTime, label);
-                if (isNotEqualToAnyOf(nEdge, sptEntries) && isNotDominatedByAnyOf(nEdge, sptEntries) && isNotDominatedWithoutTieBreaksByAnyOf(nEdge, targetLabels)) {
+                if (isNotEqualToAnyOf(nEdge, sptEntries) && isNotDominatedByAnyOf(nEdge, sptEntries)) {
                     removeDominated(nEdge, sptEntries);
                     if (to.contains(edge.getAdjNode())) {
                         removeDominated(nEdge, targetLabels);
