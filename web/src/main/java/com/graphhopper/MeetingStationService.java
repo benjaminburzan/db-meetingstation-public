@@ -19,6 +19,7 @@
 package com.graphhopper;
 
 import com.conveyal.gtfs.GTFSFeed;
+import com.conveyal.gtfs.model.Stop;
 import com.graphhopper.reader.gtfs.*;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
@@ -28,15 +29,14 @@ import com.graphhopper.util.Translation;
 import com.graphhopper.util.TranslationMap;
 import io.dropwizard.lifecycle.Managed;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.validation.ValidationException;
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.graphhopper.reader.gtfs.Label.reverseEdges;
 
@@ -49,36 +49,31 @@ public class MeetingStationService implements Managed {
     private GraphHopperStorage graphHopperStorage;
     private GtfsStorage gtfsStorage;
     private TranslationMap translationMap;
-    private GraphHopperGtfs graphHopper;
     private LocationIndex locationIndex;
 
     @GET
-    public List<String> getStations() {
+    public Collection<Stop> getStations() {
+        return gtfsStorage.getGtfsFeeds().get("gtfs_0").stops.values();
+    }
+
+    @POST
+    public List<String> getStations(@NotNull Collection<Stop> sourceStations) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
-
-        int[] sources = new int[] {
-            gtfsStorage.getStationNodes().get("8000105"),
-                gtfsStorage.getStationNodes().get("8011160"),
-
-
-
-        };
 
         final BiFunction<Long, Long, Long> aggregation = Math::max;
 
-        return Arrays.stream(sources)
-            .mapToObj(source -> {
+        return sourceStations.stream()
+            .map(stop -> {
+                final Integer stationNode = gtfsStorage.getStationNodes().get(stop.stop_id);
+                if (stationNode == null) {
+                    throw new BadRequestException(String.format("station id %s not found", stop.stop_id));
+                }
+                return stationNode;
+            })
+            .map(source -> {
                 final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
                 final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE);
-                final Translation translation = translationMap.getWithFallBack(Locale.GERMAN);
-
-                final Set<Label> labels = router.calcPaths(source, Collections.emptySet(), Instant.now(), Instant.now());
-                labels.forEach(label -> {
-                    final List<Trip.Leg> legs = getLegs(ptFlagEncoder, graphHopperStorage, graphHopper, weighting, translation, label);
-
-                    System.out.println(legs.toString());
-                });
-                System.out.println(router.getVisitedNodes());
+                router.calcPaths(source, Collections.emptySet(), Instant.now(), Instant.now());
                 return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
             })
             .reduce(new HashMap<>(), (m, n) -> {
@@ -94,30 +89,15 @@ public class MeetingStationService implements Managed {
             .collect(Collectors.toList());
     }
 
-    private static List<Trip.Leg> getLegs(PtFlagEncoder ptFlagEncoder, GraphHopperStorage graphHopperStorage, GraphHopperGtfs graphHopper, PtTravelTimeWeighting weighting, Translation translation, Label label) {
-        List<Label.Transition> transitions = new ArrayList<>();
-        reverseEdges(label, graphHopperStorage, ptFlagEncoder, true)
-                .forEach(transitions::add);
-        Collections.reverse(transitions);
-        return graphHopper.getLegs(ptFlagEncoder, translation, graphHopperStorage, weighting,
-                graphHopper.getPartitions(transitions));
-    }
-
-
     @Override
     public void start() throws Exception {
         ptFlagEncoder = new PtFlagEncoder();
         EncodingManager encodingManager = new EncodingManager(Arrays.asList(ptFlagEncoder), 8);
         GHDirectory directory = GraphHopperGtfs.createGHDirectory("target/db");
         gtfsStorage = GraphHopperGtfs.createGtfsStorage();
-
         graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList("/Users/michaelzilske/git/db-fv-gtfs/2017/2017.zip"), Collections.emptyList());
-
         locationIndex = GraphHopperGtfs.createOrLoadIndex(directory, graphHopperStorage);
         translationMap = GraphHopperGtfs.createTranslationMap();
-        graphHopper = GraphHopperGtfs.createFactory(ptFlagEncoder, translationMap, graphHopperStorage, locationIndex, gtfsStorage)
-                .createWithoutRealtimeFeed();
-
         mapInversed = gtfsStorage.getStationNodes().entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));

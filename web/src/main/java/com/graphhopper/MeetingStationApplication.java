@@ -18,9 +18,12 @@
 
 package com.graphhopper;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
+
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 public class MeetingStationApplication extends Application<MeetingStationConfiguration> {
 
@@ -30,6 +33,9 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
 
     @Override
     public void run(MeetingStationConfiguration meetingStationConfiguration, Environment environment) throws Exception {
+        environment.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        environment.getObjectMapper().setSerializationInclusion(NON_NULL);
+
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);
         environment.jersey().register(meetingStationService);
