@@ -25,7 +25,6 @@ import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
-import com.graphhopper.util.TranslationMap;
 import io.dropwizard.lifecycle.Managed;
 
 import javax.validation.constraints.NotNull;
