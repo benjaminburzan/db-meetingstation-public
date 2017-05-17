@@ -25,11 +25,9 @@ import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
-import com.graphhopper.util.Translation;
 import com.graphhopper.util.TranslationMap;
 import io.dropwizard.lifecycle.Managed;
 
-import javax.validation.ValidationException;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -38,17 +36,14 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static com.graphhopper.reader.gtfs.Label.reverseEdges;
-
 @Path("stations")
 @Produces(MediaType.APPLICATION_JSON)
 public class MeetingStationService implements Managed {
 
     private PtFlagEncoder ptFlagEncoder;
-    private Map<Integer, String> mapInversed;
+    private Map<Integer, String> stopNodes;
     private GraphHopperStorage graphHopperStorage;
     private GtfsStorage gtfsStorage;
-    private TranslationMap translationMap;
     private LocationIndex locationIndex;
 
     @GET
@@ -82,10 +77,9 @@ public class MeetingStationService implements Managed {
                 n.forEach((k, v) -> stringIntegerHashMap.merge(k, v, aggregation));
                 return stringIntegerHashMap;
             })
-            .entrySet().stream().filter(e -> mapInversed.containsKey(e.getKey()))
+            .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(Map.Entry::getValue))
-            .limit(10)
-            .map(e -> db.stops.get(mapInversed.get(e.getKey())).stop_name)
+            .map(e -> db.stops.get(stopNodes.get(e.getKey())).stop_name)
             .collect(Collectors.toList());
     }
 
@@ -97,8 +91,7 @@ public class MeetingStationService implements Managed {
         gtfsStorage = GraphHopperGtfs.createGtfsStorage();
         graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList("/Users/michaelzilske/git/db-fv-gtfs/2017/2017.zip"), Collections.emptyList());
         locationIndex = GraphHopperGtfs.createOrLoadIndex(directory, graphHopperStorage);
-        translationMap = GraphHopperGtfs.createTranslationMap();
-        mapInversed = gtfsStorage.getStationNodes().entrySet()
+        stopNodes = gtfsStorage.getStationNodes().entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
