@@ -1,0 +1,1 @@
+web: sh -c 'cd web && java -Xmx10000m -jar target/graphhopper-web-0.9-SNAPSHOT-with-dep.jar datareader.file=../brandenburg-latest.osm.pbf gtfs.file=../GTFS_VBB_Nov2015_Dez2016.zip jetty.port=5000'

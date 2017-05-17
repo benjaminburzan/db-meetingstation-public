@@ -29,7 +29,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 
-final class GraphExplorer {
+public final class GraphExplorer {
 
     private final EdgeExplorer edgeExplorer;
     private final PtFlagEncoder flagEncoder;
@@ -38,7 +38,7 @@ final class GraphExplorer {
     private final boolean reverse;
     private final PtTravelTimeWeighting weighting;
 
-    GraphExplorer(Graph graph, PtTravelTimeWeighting weighting, PtFlagEncoder flagEncoder, GtfsStorage gtfsStorage, RealtimeFeed realtimeFeed, boolean reverse) {
+    public GraphExplorer(Graph graph, PtTravelTimeWeighting weighting, PtFlagEncoder flagEncoder, GtfsStorage gtfsStorage, RealtimeFeed realtimeFeed, boolean reverse) {
         this.edgeExplorer = graph.createEdgeExplorer(new DefaultEdgeFilter(flagEncoder, reverse, !reverse));
         this.flagEncoder = flagEncoder;
         this.weighting = weighting;

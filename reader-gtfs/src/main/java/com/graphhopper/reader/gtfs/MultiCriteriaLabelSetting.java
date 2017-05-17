@@ -34,11 +34,11 @@ import java.util.*;
  * @author Michael Zilske
  * @author Peter Karich
  */
-class MultiCriteriaLabelSetting {
+public class MultiCriteriaLabelSetting {
 
     private final PtFlagEncoder flagEncoder;
     private final PtTravelTimeWeighting weighting;
-    final SetMultimap<Integer, Label> fromMap;
+    public final SetMultimap<Integer, Label> fromMap;
     private final PriorityQueue<Label> fromHeap;
     private final int maxVisitedNodes;
     private final boolean reverse;
@@ -49,7 +49,7 @@ class MultiCriteriaLabelSetting {
     private int visitedNodes;
     private final GraphExplorer explorer;
 
-    MultiCriteriaLabelSetting(GraphExplorer explorer, Weighting weighting, boolean reverse, double maxWalkDistancePerLeg, double maxTransferDistancePerLeg, boolean mindTransfers, int maxVisitedNodes) {
+    public MultiCriteriaLabelSetting(GraphExplorer explorer, Weighting weighting, boolean reverse, double maxWalkDistancePerLeg, double maxTransferDistancePerLeg, boolean mindTransfers, int maxVisitedNodes) {
         this.weighting = (PtTravelTimeWeighting) weighting;
         this.flagEncoder = (PtFlagEncoder) weighting.getFlagEncoder();
         this.maxVisitedNodes = maxVisitedNodes;
@@ -76,7 +76,7 @@ class MultiCriteriaLabelSetting {
         return currentTimeCriterion(o1) + o1.nTransfers + o1.nWalkDistanceConstraintViolations;
     }
 
-    Set<Label> calcPaths(int from, Set<Integer> to, Instant startTime, Instant rangeQueryEndTime) {
+    public Set<Label> calcPaths(int from, Set<Integer> to, Instant startTime, Instant rangeQueryEndTime) {
         this.rangeQueryEndTime = rangeQueryEndTime.toEpochMilli();
         Set<Label> targetLabels = new HashSet<>();
         Label label = new Label(startTime.toEpochMilli(), EdgeIterator.NO_EDGE, from, 0, 0, 0.0, Long.MAX_VALUE, null);
@@ -300,7 +300,7 @@ class MultiCriteriaLabelSetting {
         return profileQuerySlackComponent(me, they);
     }
 
-    int getVisitedNodes() {
+    public int getVisitedNodes() {
         return visitedNodes;
     }
 

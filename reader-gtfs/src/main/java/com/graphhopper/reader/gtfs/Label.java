@@ -22,9 +22,9 @@ import com.graphhopper.util.EdgeIteratorState;
 
 import java.util.Iterator;
 
-class Label {
+public class Label {
 
-    static class Transition {
+    public static class Transition {
         final Label label;
         final EdgeLabel edge;
 
@@ -61,7 +61,7 @@ class Label {
         }
     }
 
-    final long currentTime;
+    public final long currentTime;
 
     final int edge;
     final int adjNode;
@@ -90,7 +90,7 @@ class Label {
         return adjNode + " (" + edge + ") time: " + currentTime;
     }
 
-    static Iterable<Transition> reverseEdges(Label leaf, Graph graph, PtFlagEncoder flagEncoder, boolean reverseEdgeFlags) {
+    public static Iterable<Transition> reverseEdges(Label leaf, Graph graph, PtFlagEncoder flagEncoder, boolean reverseEdgeFlags) {
         return new Iterable<Transition>() {
             @Override
             public Iterator<Transition> iterator() {

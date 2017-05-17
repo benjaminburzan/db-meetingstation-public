@@ -24,13 +24,13 @@ import com.graphhopper.util.EdgeIteratorState;
 
 import java.time.Instant;
 
-class PtTravelTimeWeighting extends AbstractWeighting {
+public class PtTravelTimeWeighting extends AbstractWeighting {
 
     private final boolean reverse;
     private final double walkSpeedKmH;
     private final int transferFactor;
 
-    PtTravelTimeWeighting(FlagEncoder encoder, double walkSpeedKmH) {
+    public PtTravelTimeWeighting(FlagEncoder encoder, double walkSpeedKmH) {
 		this(encoder, false, walkSpeedKmH, 1);
     }
 

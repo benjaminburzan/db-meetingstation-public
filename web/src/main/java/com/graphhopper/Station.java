@@ -16,10 +16,7 @@
  *  limitations under the License.
  */
 
-package com.graphhopper.http;
+package com.graphhopper;
 
-interface GraphHopperService extends AutoCloseable {
-
-    void start();
-
+public class Station {
 }

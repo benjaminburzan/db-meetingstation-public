@@ -337,7 +337,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return path;
     }
 
-    List<List<Label.Transition>> getPartitions(List<Label.Transition> transitions) {
+    public List<List<Label.Transition>> getPartitions(List<Label.Transition> transitions) {
         List<List<Label.Transition>> partitions = new ArrayList<>();
         partitions.add(new ArrayList<>());
         final Iterator<Label.Transition> iterator = transitions.iterator();
@@ -355,7 +355,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return partitions;
     }
 
-    List<Trip.Leg> getLegs(PtFlagEncoder encoder, Translation tr, Graph queryGraph, PtTravelTimeWeighting weighting, List<List<Label.Transition>> partitions) {
+    public List<Trip.Leg> getLegs(PtFlagEncoder encoder, Translation tr, Graph queryGraph, PtTravelTimeWeighting weighting, List<List<Label.Transition>> partitions) {
         return partitions.stream().flatMap(partition -> parsePathIntoLegs(partition, queryGraph, encoder, weighting, tr).stream()).collect(Collectors.toList());
     }
 
