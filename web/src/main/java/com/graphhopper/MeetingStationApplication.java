@@ -19,8 +19,8 @@
 package com.graphhopper;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.dropwizard.Application;
-import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
@@ -35,6 +35,7 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
     public void run(MeetingStationConfiguration meetingStationConfiguration, Environment environment) throws Exception {
         environment.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         environment.getObjectMapper().setSerializationInclusion(NON_NULL);
+        environment.getObjectMapper().registerModule(new JavaTimeModule());
 
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);

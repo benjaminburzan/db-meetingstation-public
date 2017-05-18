@@ -1,29 +1,16 @@
 server:
   applicationConnectors:
     - type: http
-      port: 8080
+      port: 5000
 
   adminConnectors:
     - type: http
-      port: 8081
+      port: 5010
 
 logging:
   level: INFO
-
-  loggers:
-    "org.hibernate": INFO
-    "com.graphhopper.vrp": DEBUG
-    "com.graphhopper.jsprit": WARN
 
   appenders:
     - type: console
       timeZone: UTC
       logFormat: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    - type: file
-      timeZone: UTC
-      currentLogFilename: ./logs/vrp-app.log
-      archivedLogFilenamePattern: ./logs/vrp-app.%d.log.gz
-      archivedFileCount: 5
-      logFormat: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-
-

@@ -20,6 +20,7 @@ package com.graphhopper;
 
 import com.conveyal.gtfs.GTFSFeed;
 import com.conveyal.gtfs.model.Stop;
+import com.google.common.collect.Iterables;
 import com.graphhopper.reader.gtfs.*;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
@@ -34,6 +35,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Path("stations")
 @Produces(MediaType.APPLICATION_JSON)
@@ -50,8 +52,26 @@ public class MeetingStationService implements Managed {
         return gtfsStorage.getGtfsFeeds().get("gtfs_0").stops.values();
     }
 
+    static class StopWithMeetingStationLabel {
+        public Stop stop;
+        public MeetingStationLabel label;
+
+        public StopWithMeetingStationLabel(Stop stop, MeetingStationLabel label) {
+            this.stop = stop;
+            this.label = label;
+        }
+    }
+
+    class MeetingStationLabel {
+        public Instant arrivalTime;
+
+        public MeetingStationLabel(Instant arrivalTime) {
+            this.arrivalTime = arrivalTime;
+        }
+    }
+
     @POST
-    public List<String> getStations(@NotNull Collection<Stop> sourceStations) {
+    public List<StopWithMeetingStationLabel> getStations(@NotNull Collection<Stop> sourceStations) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
 
         final BiFunction<Long, Long, Long> aggregation = Math::max;
@@ -78,7 +98,7 @@ public class MeetingStationService implements Managed {
             })
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(Map.Entry::getValue))
-            .map(e -> db.stops.get(stopNodes.get(e.getKey())).stop_name)
+            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue()))))
             .collect(Collectors.toList());
     }
 
@@ -88,7 +108,7 @@ public class MeetingStationService implements Managed {
         EncodingManager encodingManager = new EncodingManager(Arrays.asList(ptFlagEncoder), 8);
         GHDirectory directory = GraphHopperGtfs.createGHDirectory("target/db");
         gtfsStorage = GraphHopperGtfs.createGtfsStorage();
-        graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList("/Users/michaelzilske/git/db-fv-gtfs/2017/2017.zip"), Collections.emptyList());
+        graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList("2017.zip"), Collections.emptyList());
         locationIndex = GraphHopperGtfs.createOrLoadIndex(directory, graphHopperStorage);
         stopNodes = gtfsStorage.getStationNodes().entrySet()
                 .stream()

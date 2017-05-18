@@ -44,3 +44,7 @@ local.properties
 !malta-latest.osm.pbf
 /reader-json/nbproject/
 /graph-cache
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
