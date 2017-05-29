@@ -33,7 +33,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.time.Instant;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -81,17 +80,11 @@ public class MeetingStationService implements Managed {
 
     @POST
     public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
-        return getStationsInternal(Collections.singletonList(request.sourceStation), request.departureTime, request.targetStations);
-    }
-
-    private List<StopWithMeetingStationLabel> getStationsInternal(Collection<Stop> sourceStations, Instant departureTime, Collection<Stop> targetStations) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
 
-        final BiFunction<Long, Long, Long> aggregation = Math::max;
-
         final Predicate<? super StopWithMeetingStationLabel> filter;
-        if (targetStations != null) {
-            final Set<String> targetIds = targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
+        if (request.targetStations != null) {
+            final Set<String> targetIds = request.targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
             filter = label -> targetIds.contains(label.stop.stop_id);
         } else {
             filter = label -> true;
@@ -99,42 +92,31 @@ public class MeetingStationService implements Managed {
 
         Set<Integer> visitedNodes = new HashSet<>();
         final Supplier<Boolean> goOn;
-        if (targetStations != null) {
-            final Set<Integer> targetIds = targetStations.stream().map(targetStation -> gtfsStorage.getStationNodes().get(targetStation.stop_id)).collect(Collectors.toSet());
+        if (request.targetStations != null) {
+            final Set<Integer> targetIds = request.targetStations.stream().map(targetStation -> gtfsStorage.getStationNodes().get(targetStation.stop_id)).collect(Collectors.toSet());
             goOn = () -> !visitedNodes.containsAll(targetIds);
         } else {
             goOn = () -> true;
         }
+        final Integer stationNode = gtfsStorage.getStationNodes().get(request.sourceStation.stop_id);
+        if (stationNode == null) {
+            throw new BadRequestException(String.format("station id %s not found", request.sourceStation.stop_id));
+        }
+        final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
+        final MultiCriteriaLabelSetting.Visitor visitor = new MultiCriteriaLabelSetting.Visitor() {
+            @Override
+            public void visit(Label nEdge) {
+                visitedNodes.add(nEdge.adjNode);
+            }
+        };
+        final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE, visitor, goOn);
+        router.calcPaths(stationNode, Collections.emptySet(), request.departureTime, request.departureTime);
 
-        return sourceStations.stream()
-            .map(stop -> {
-                final Integer stationNode = gtfsStorage.getStationNodes().get(stop.stop_id);
-                if (stationNode == null) {
-                    throw new BadRequestException(String.format("station id %s not found", stop.stop_id));
-                }
-                return stationNode;
-            })
-            .map(source -> {
-                final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
-                final MultiCriteriaLabelSetting.Visitor visitor = new MultiCriteriaLabelSetting.Visitor() {
-                    @Override
-                    public void visit(Label nEdge) {
-                        visitedNodes.add(nEdge.adjNode);
-                    }
-                };
-                final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE, visitor, goOn);
-                router.calcPaths(source, Collections.emptySet(), departureTime, departureTime);
-                return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
-            })
-            .reduce(new HashMap<>(), (m, n) -> {
-                final HashMap<Integer, Long> stringIntegerHashMap = new HashMap<>();
-                m.forEach((k, v) -> stringIntegerHashMap.merge(k, v, aggregation));
-                n.forEach((k, v) -> stringIntegerHashMap.merge(k, v, aggregation));
-                return stringIntegerHashMap;
-            })
+        final Map<Integer, Label> tree = router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().min(Comparator.comparingLong(l -> l.currentTime)).get()));
+        return tree
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
-            .sorted(Comparator.comparingLong(Map.Entry::getValue))
-            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue()))))
+            .sorted(Comparator.comparingLong(e -> e.getValue().currentTime))
+            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime))))
             .filter(filter)
             .collect(Collectors.toList());
     }

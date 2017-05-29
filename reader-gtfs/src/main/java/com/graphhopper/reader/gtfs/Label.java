@@ -70,7 +70,7 @@ public class Label {
     final int nWalkDistanceConstraintViolations;
 
     final double walkDistanceOnCurrentLeg;
-    final long firstPtDepartureTime;
+    public final long firstPtDepartureTime;
 
     final Label parent;
 
