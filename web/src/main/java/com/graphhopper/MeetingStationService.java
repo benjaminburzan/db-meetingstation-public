@@ -20,7 +20,6 @@ package com.graphhopper;
 
 import com.conveyal.gtfs.GTFSFeed;
 import com.conveyal.gtfs.model.Stop;
-import com.google.common.collect.Iterables;
 import com.graphhopper.reader.gtfs.*;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
@@ -35,10 +34,10 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Path("stations")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class MeetingStationService implements Managed {
 
     private PtFlagEncoder ptFlagEncoder;
@@ -70,13 +69,18 @@ public class MeetingStationService implements Managed {
         }
     }
 
+    static class StationRequest {
+        public @NotNull Collection<Stop> sourceStations;
+        public Instant departureTime = Instant.now();
+    }
+
     @POST
-    public List<StopWithMeetingStationLabel> getStations(@NotNull Collection<Stop> sourceStations) {
+    public List<StopWithMeetingStationLabel> getStations(StationRequest request) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
 
         final BiFunction<Long, Long, Long> aggregation = Math::max;
 
-        return sourceStations.stream()
+        return request.sourceStations.stream()
             .map(stop -> {
                 final Integer stationNode = gtfsStorage.getStationNodes().get(stop.stop_id);
                 if (stationNode == null) {
@@ -87,7 +91,7 @@ public class MeetingStationService implements Managed {
             .map(source -> {
                 final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
                 final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE);
-                router.calcPaths(source, Collections.emptySet(), Instant.now(), Instant.now());
+                router.calcPaths(source, Collections.emptySet(), request.departureTime, request.departureTime);
                 return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
             })
             .reduce(new HashMap<>(), (m, n) -> {
