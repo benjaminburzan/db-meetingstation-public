@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Path("stations")
@@ -80,11 +81,7 @@ public class MeetingStationService implements Managed {
 
     @POST
     public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
-        final Collection<Stop> targetStations = request.targetStations;
-        final Collection<Stop> sourceStations = Collections.singletonList(request.sourceStation);
-        final Instant departureTime = request.departureTime;
-
-        return getStationsInternal(sourceStations, departureTime, targetStations);
+        return getStationsInternal(Collections.singletonList(request.sourceStation), request.departureTime, request.targetStations);
     }
 
     private List<StopWithMeetingStationLabel> getStationsInternal(Collection<Stop> sourceStations, Instant departureTime, Collection<Stop> targetStations) {
@@ -93,12 +90,20 @@ public class MeetingStationService implements Managed {
         final BiFunction<Long, Long, Long> aggregation = Math::max;
 
         final Predicate<? super StopWithMeetingStationLabel> filter;
-
         if (targetStations != null) {
             final Set<String> targetIds = targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
             filter = label -> targetIds.contains(label.stop.stop_id);
         } else {
             filter = label -> true;
+        }
+
+        Set<Integer> visitedNodes = new HashSet<>();
+        final Supplier<Boolean> goOn;
+        if (targetStations != null) {
+            final Set<Integer> targetIds = targetStations.stream().map(targetStation -> gtfsStorage.getStationNodes().get(targetStation.stop_id)).collect(Collectors.toSet());
+            goOn = () -> !visitedNodes.containsAll(targetIds);
+        } else {
+            goOn = () -> true;
         }
 
         return sourceStations.stream()
@@ -111,7 +116,13 @@ public class MeetingStationService implements Managed {
             })
             .map(source -> {
                 final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
-                final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE);
+                final MultiCriteriaLabelSetting.Visitor visitor = new MultiCriteriaLabelSetting.Visitor() {
+                    @Override
+                    public void visit(Label nEdge) {
+                        visitedNodes.add(nEdge.adjNode);
+                    }
+                };
+                final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE, visitor, goOn);
                 router.calcPaths(source, Collections.emptySet(), departureTime, departureTime);
                 return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
             })

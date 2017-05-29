@@ -25,6 +25,7 @@ import com.graphhopper.util.EdgeIteratorState;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * Implements a Multi-Criteria Label Setting (MLS) path finding algorithm
@@ -35,6 +36,14 @@ import java.util.*;
  * @author Peter Karich
  */
 public class MultiCriteriaLabelSetting {
+
+    private final Visitor visitor;
+    private final Supplier<Boolean> goOn;
+
+    public static interface Visitor {
+
+        void visit(Label nEdge);
+    }
 
     private final PtFlagEncoder flagEncoder;
     private final PtTravelTimeWeighting weighting;
@@ -49,7 +58,7 @@ public class MultiCriteriaLabelSetting {
     private int visitedNodes;
     private final GraphExplorer explorer;
 
-    public MultiCriteriaLabelSetting(GraphExplorer explorer, Weighting weighting, boolean reverse, double maxWalkDistancePerLeg, double maxTransferDistancePerLeg, boolean mindTransfers, int maxVisitedNodes) {
+    public MultiCriteriaLabelSetting(GraphExplorer explorer, Weighting weighting, boolean reverse, double maxWalkDistancePerLeg, double maxTransferDistancePerLeg, boolean mindTransfers, int maxVisitedNodes, Visitor visitor, Supplier<Boolean> goOn) {
         this.weighting = (PtTravelTimeWeighting) weighting;
         this.flagEncoder = (PtFlagEncoder) weighting.getFlagEncoder();
         this.maxVisitedNodes = maxVisitedNodes;
@@ -58,6 +67,8 @@ public class MultiCriteriaLabelSetting {
         this.maxWalkDistancePerLeg = maxWalkDistancePerLeg;
         this.maxTransferDistancePerLeg = maxTransferDistancePerLeg;
         this.mindTransfers = mindTransfers;
+        this.visitor = visitor;
+        this.goOn = goOn;
         fromHeap = new PriorityQueue<>(new Comparator<Label>() {
             @Override
             public int compare(Label o1, Label o) {
@@ -84,7 +95,8 @@ public class MultiCriteriaLabelSetting {
         if (to.contains(from)) {
             targetLabels.add(label);
         }
-        while (true) {
+        visitor.visit(label);
+        while (goOn.get()) {
             visitedNodes++;
             if (maxVisitedNodes < visitedNodes)
                 break;
@@ -121,6 +133,7 @@ public class MultiCriteriaLabelSetting {
                         targetLabels.add(nEdge);
                     }
                     fromHeap.add(nEdge);
+                    visitor.visit(nEdge);
                 }
             }
 

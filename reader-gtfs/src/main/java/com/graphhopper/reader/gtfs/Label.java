@@ -64,7 +64,7 @@ public class Label {
     public final long currentTime;
 
     final int edge;
-    final int adjNode;
+    public final int adjNode;
 
     final int nTransfers;
     final int nWalkDistanceConstraintViolations;

@@ -175,7 +175,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         private Set<Label> findPaths(int startNode, int destNode) {
             StopWatch stopWatch = new StopWatch().start();
             GraphExplorer graphExplorer = new GraphExplorer(queryGraph, weighting, flagEncoder, gtfsStorage, realtimeFeed, arriveBy);
-            MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(graphExplorer, weighting, arriveBy, maxWalkDistancePerLeg, maxTransferDistancePerLeg, !ignoreTransfers, maxVisitedNodesForRequest);
+            MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(graphExplorer, weighting, arriveBy, maxWalkDistancePerLeg, maxTransferDistancePerLeg, !ignoreTransfers, maxVisitedNodesForRequest, nEdge -> {}, () -> true);
             Set<Label> solutions = router.calcPaths(startNode, Collections.singleton(destNode), initialTime, rangeQueryEndTime);
             response.addDebugInfo("routing:" + stopWatch.stop().getSeconds() + "s");
             if (router.getVisitedNodes() >= maxVisitedNodesForRequest) {
