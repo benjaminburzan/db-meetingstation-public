@@ -118,24 +118,17 @@ public final class GraphExplorer {
     }
 
     private long waitingTime(EdgeIteratorState edge, long earliestStartTime) {
-        return flagEncoder.getTime(edge.getFlags()) * 1000 - secondsOnTrafficDay(edge, earliestStartTime) * 1000;
+        return flagEncoder.getTime(edge.getFlags()) * 1000 - millisOnTravelDay(edge, earliestStartTime);
     }
 
     private int secondsOnTrafficDay(EdgeIteratorState edge, long instant) {
         final ZoneId zoneId = gtfsStorage.getTimeZones().get(flagEncoder.getValidityId(edge.getFlags())).zoneId;
-        final int i = Instant.ofEpochMilli(instant).atZone(zoneId).toLocalTime().toSecondOfDay();
-        return i;
+        return Instant.ofEpochMilli(instant).atZone(zoneId).toLocalTime().toSecondOfDay();
     }
 
-    private long secondsOnTrafficDay2(EdgeIteratorState edge, long instant) {
+    private long millisOnTravelDay(EdgeIteratorState edge, long instant) {
         final ZoneId zoneId = gtfsStorage.getTimeZones().get(flagEncoder.getValidityId(edge.getFlags())).zoneId;
-        final long l = Instant.ofEpochMilli(instant).atZone(zoneId).toLocalTime().toNanoOfDay();
-        final long i = l / 1000000L;
-        final long j = Instant.ofEpochMilli(instant).atZone(zoneId).toLocalTime().toSecondOfDay();
-        System.out.println(j);
-        System.out.println(i);
-        System.out.println(l);
-        return i;
+        return Instant.ofEpochMilli(instant).atZone(zoneId).toLocalTime().toNanoOfDay() / 1000000L;
     }
 
     private boolean isValidOn(EdgeIteratorState edge, long instant) {
