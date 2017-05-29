@@ -31,10 +31,12 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
 @Path("stations")
@@ -65,9 +67,11 @@ public class MeetingStationService implements Managed {
 
     class MeetingStationLabel {
         public Instant arrivalTime;
+        public Duration travelTime;
 
-        public MeetingStationLabel(Instant arrivalTime) {
+        public MeetingStationLabel(Instant arrivalTime, Duration travelTime) {
             this.arrivalTime = arrivalTime;
+            this.travelTime = travelTime;
         }
     }
 
@@ -81,6 +85,7 @@ public class MeetingStationService implements Managed {
     @POST
     public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
+        final ToLongFunction<Label> metric = l -> l.currentTime;
 
         final Predicate<? super StopWithMeetingStationLabel> filter;
         if (request.targetStations != null) {
@@ -112,11 +117,13 @@ public class MeetingStationService implements Managed {
         final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE, visitor, goOn);
         router.calcPaths(stationNode, Collections.emptySet(), request.departureTime, request.departureTime);
 
-        final Map<Integer, Label> tree = router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().min(Comparator.comparingLong(l -> l.currentTime)).get()));
+        final Map<Integer, Label> tree = router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> {
+            return e.getValue().stream().min(Comparator.comparingLong(metric)).get();
+        }));
         return tree
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(e -> e.getValue().currentTime))
-            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime))))
+            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime), e.getValue().nTransfers > 0 ? Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) : Duration.ZERO)))
             .filter(filter)
             .collect(Collectors.toList());
     }

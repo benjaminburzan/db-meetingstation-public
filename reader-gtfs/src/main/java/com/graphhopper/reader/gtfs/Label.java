@@ -66,7 +66,7 @@ public class Label {
     final int edge;
     public final int adjNode;
 
-    final int nTransfers;
+    public final int nTransfers;
     final int nWalkDistanceConstraintViolations;
 
     final double walkDistanceOnCurrentLeg;
