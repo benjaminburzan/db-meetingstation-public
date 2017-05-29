@@ -27,6 +27,7 @@ import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
 import io.dropwizard.lifecycle.Managed;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -78,7 +79,7 @@ public class MeetingStationService implements Managed {
     }
 
     @POST
-    public List<StopWithMeetingStationLabel> getStations(StationRequest request) {
+    public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
         final Collection<Stop> targetStations = request.targetStations;
         final Collection<Stop> sourceStations = Collections.singletonList(request.sourceStation);
         final Instant departureTime = request.departureTime;
