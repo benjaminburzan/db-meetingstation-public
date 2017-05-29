@@ -71,7 +71,7 @@ public class MeetingStationService implements Managed {
     }
 
     static class StationRequest {
-        public @NotNull Collection<Stop> sourceStations;
+        public @NotNull Stop sourceStation;
         public Collection<Stop> targetStations;
 
         public Instant departureTime = Instant.now();
@@ -79,19 +79,28 @@ public class MeetingStationService implements Managed {
 
     @POST
     public List<StopWithMeetingStationLabel> getStations(StationRequest request) {
+        final Collection<Stop> targetStations = request.targetStations;
+        final Collection<Stop> sourceStations = Collections.singletonList(request.sourceStation);
+        final Instant departureTime = request.departureTime;
+
+        return getStationsInternal(sourceStations, departureTime, targetStations);
+    }
+
+    private List<StopWithMeetingStationLabel> getStationsInternal(Collection<Stop> sourceStations, Instant departureTime, Collection<Stop> targetStations) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
 
         final BiFunction<Long, Long, Long> aggregation = Math::max;
 
         final Predicate<? super StopWithMeetingStationLabel> filter;
-        if (request.targetStations != null) {
-            final Set<String> targetIds = request.targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
+
+        if (targetStations != null) {
+            final Set<String> targetIds = targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
             filter = label -> targetIds.contains(label.stop.stop_id);
         } else {
             filter = label -> true;
         }
 
-        return request.sourceStations.stream()
+        return sourceStations.stream()
             .map(stop -> {
                 final Integer stationNode = gtfsStorage.getStationNodes().get(stop.stop_id);
                 if (stationNode == null) {
@@ -102,7 +111,7 @@ public class MeetingStationService implements Managed {
             .map(source -> {
                 final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
                 final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, true, Integer.MAX_VALUE);
-                router.calcPaths(source, Collections.emptySet(), request.departureTime, request.departureTime);
+                router.calcPaths(source, Collections.emptySet(), departureTime, departureTime);
                 return router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().mapToLong(l -> l.currentTime).min().getAsLong()));
             })
             .reduce(new HashMap<>(), (m, n) -> {
