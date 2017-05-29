@@ -33,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Path("stations")
@@ -71,6 +72,8 @@ public class MeetingStationService implements Managed {
 
     static class StationRequest {
         public @NotNull Collection<Stop> sourceStations;
+        public Collection<Stop> targetStations;
+
         public Instant departureTime = Instant.now();
     }
 
@@ -79,6 +82,14 @@ public class MeetingStationService implements Managed {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
 
         final BiFunction<Long, Long, Long> aggregation = Math::max;
+
+        final Predicate<? super StopWithMeetingStationLabel> filter;
+        if (request.targetStations != null) {
+            final Set<String> targetIds = request.targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
+            filter = label -> targetIds.contains(label.stop.stop_id);
+        } else {
+            filter = label -> true;
+        }
 
         return request.sourceStations.stream()
             .map(stop -> {
@@ -103,6 +114,7 @@ public class MeetingStationService implements Managed {
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(Map.Entry::getValue))
             .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue()))))
+            .filter(filter)
             .collect(Collectors.toList());
     }
 
