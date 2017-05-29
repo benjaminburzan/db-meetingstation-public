@@ -132,7 +132,11 @@ public final class GraphExplorer {
             final int validityId = flagEncoder.getValidityId(edge.getFlags());
             final GtfsStorage.Validity validity = gtfsStorage.getValidities().get(validityId);
             final int trafficDay = (int) ChronoUnit.DAYS.between(validity.start, Instant.ofEpochMilli(instant).atZone(validity.zoneId).toLocalDate());
-            return validity.validity.get(trafficDay);
+            if (trafficDay < 0) {
+                return false;
+            } else {
+                return validity.validity.get(trafficDay);
+            }
         } else {
             return true;
         }
