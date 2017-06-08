@@ -7,6 +7,11 @@ server:
     - type: http
       port: 5010
 
+  requestLog:
+      appenders:
+        - type: console
+          logFormat: "%h %l %u [%t] %r %s %b \"%i{Referer}\" \"%i{User-Agent}\" %D %requestContent %responseContent"
+
 logging:
   level: INFO
 

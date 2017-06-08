@@ -18,6 +18,7 @@
 
 package com.graphhopper;
 
+import ch.qos.logback.access.servlet.TeeFilter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.dropwizard.Application;
@@ -41,7 +42,8 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
         environment.getObjectMapper().setSerializationInclusion(NON_NULL);
         environment.getObjectMapper().registerModule(new JavaTimeModule());
 
-        environment.jersey().register(new LoggingFeature(Logger.getLogger(LoggingFeature.DEFAULT_LOGGER_NAME), Level.INFO, LoggingFeature.Verbosity.PAYLOAD_ANY, LoggingFeature.DEFAULT_MAX_ENTITY_SIZE));
+        // so that I can use %responseContent in the access log
+        environment.servlets().addFilter("teeFilter", TeeFilter.class).addMappingForUrlPatterns(null, false, "/*");
 
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);
