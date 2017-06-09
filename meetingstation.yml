@@ -1,4 +1,6 @@
 server:
+  minThreads: 1
+  maxThreads: 10
   applicationConnectors:
     - type: http
       port: 5000
