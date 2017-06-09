@@ -42,9 +42,6 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
         environment.getObjectMapper().setSerializationInclusion(NON_NULL);
         environment.getObjectMapper().registerModule(new JavaTimeModule());
 
-        // so that I can use %responseContent in the access log
-        environment.servlets().addFilter("teeFilter", TeeFilter.class).addMappingForUrlPatterns(null, false, "/*");
-
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);
         environment.jersey().register(meetingStationService);
