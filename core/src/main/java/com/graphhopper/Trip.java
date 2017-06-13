@@ -1,5 +1,6 @@
 package com.graphhopper;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.InstructionList;
 import com.vividsolutions.jts.geom.Geometry;
@@ -11,11 +12,11 @@ import java.util.List;
 public class Trip {
     public static abstract class Leg {
         public final String type;
-        public final String departureLocation;
-        public final Instant departureTime;
+        @JsonIgnore public final String departureLocation;
+        @JsonIgnore public final Instant departureTime;
         public final Geometry geometry;
-        public final double distance;
-        public final Instant arrivalTime;
+        @JsonIgnore public final double distance;
+        @JsonIgnore public final Instant arrivalTime;
 
         public Leg(String type, String departureLocation, Instant departureTime, Geometry geometry, double distance, Instant arrivalTime) {
             this.type = type;
@@ -26,17 +27,17 @@ public class Trip {
             this.arrivalTime = arrivalTime;
         }
 
-        public double getDistance() {
+        @JsonIgnore public double getDistance() {
             return distance;
         }
     }
 
     public static class Stop {
-        public final String stop_id;
-        public final String name;
-        public final Point geometry;
+        @JsonIgnore public final String name;
+        @JsonIgnore public final Point geometry;
 
         public final Instant arrivalTime;
+        public final String stop_id;
         public final Instant departureTime;
 
         public Stop(String stop_id, String name, Point geometry, Instant arrivalTime, Instant departureTime) {
@@ -56,20 +57,20 @@ public class Trip {
         }
     }
     public static class PtLeg extends Leg {
-        public final String feedId;
+        public final String feed_id;
         public final boolean isInSameVehicleAsPrevious;
         public final String trip_headsign;
-        public final long travelTime;
+        @JsonIgnore public final long travelTime;
         public final List<Stop> stops;
-        public final String tripId;
-        public final String routeId;
+        public final String trip_id;
+        public final String route_id;
 
         public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, String tripId, String routeId, List<EdgeIteratorState> edges, Instant departureTime, List<Stop> stops, double distance, long travelTime, Instant arrivalTime, Geometry geometry) {
             super("pt", stops.get(0).name, departureTime, geometry, distance, arrivalTime);
-            this.feedId = feedId;
+            this.feed_id = feedId;
             this.isInSameVehicleAsPrevious = isInSameVehicleAsPrevious;
-            this.tripId = tripId;
-            this.routeId = routeId;
+            this.trip_id = tripId;
+            this.route_id = routeId;
             this.trip_headsign = edges.get(0).getName();
             this.travelTime = travelTime;
             this.stops = stops;
