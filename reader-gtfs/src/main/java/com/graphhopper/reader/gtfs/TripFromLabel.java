@@ -225,6 +225,9 @@ public class TripFromLabel {
     // by hand, because it is always ugly, but use a parser library.
     // The code would then read like a specification of what paths through the graph mean.
     public List<Trip.Leg> parsePathIntoLegs(List<Label.Transition> path, Graph graph, PtFlagEncoder encoder, Weighting weighting, Translation tr) {
+        if (path.size() <= 1) {
+            return Collections.emptyList();
+        }
         if (GtfsStorage.EdgeType.ENTER_PT == path.get(1).edge.edgeType) {
             final GtfsStorage.FeedIdWithTimezone feedIdWithTimezone = gtfsStorage.getTimeZones().get(path.get(1).edge.timeZoneId);
             final GTFSFeed gtfsFeed = gtfsStorage.getGtfsFeeds().get(feedIdWithTimezone.feedId);
