@@ -5,19 +5,19 @@ import com.graphhopper.util.InstructionList;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 
 public class Trip {
     public static abstract class Leg {
         public final String type;
         public final String departureLocation;
-        public final Date departureTime;
+        public final Instant departureTime;
         public final Geometry geometry;
         public final double distance;
-        public final Date arrivalTime;
+        public final Instant arrivalTime;
 
-        public Leg(String type, String departureLocation, Date departureTime, Geometry geometry, double distance, Date arrivalTime) {
+        public Leg(String type, String departureLocation, Instant departureTime, Geometry geometry, double distance, Instant arrivalTime) {
             this.type = type;
             this.departureLocation = departureLocation;
             this.geometry = geometry;
@@ -36,10 +36,10 @@ public class Trip {
         public final String name;
         public final Point geometry;
 
-        public final Date arrivalTime;
-        public final Date departureTime;
+        public final Instant arrivalTime;
+        public final Instant departureTime;
 
-        public Stop(String stop_id, String name, Point geometry, Date arrivalTime, Date departureTime) {
+        public Stop(String stop_id, String name, Point geometry, Instant arrivalTime, Instant departureTime) {
             this.stop_id = stop_id;
             this.name = name;
             this.geometry = geometry;
@@ -50,7 +50,7 @@ public class Trip {
     public static class WalkLeg extends Leg {
         public final InstructionList instructions;
 
-        public WalkLeg(String departureLocation, Date departureTime, List<EdgeIteratorState> edges, Geometry geometry, double distance, InstructionList instructions, Date arrivalTime) {
+        public WalkLeg(String departureLocation, Instant departureTime, List<EdgeIteratorState> edges, Geometry geometry, double distance, InstructionList instructions, Instant arrivalTime) {
             super("walk", departureLocation, departureTime, geometry, distance, arrivalTime);
             this.instructions = instructions;
         }
@@ -64,7 +64,7 @@ public class Trip {
         public final String tripId;
         public final String routeId;
 
-        public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, String tripId, String routeId, List<EdgeIteratorState> edges, Date departureTime, List<Stop> stops, double distance, long travelTime, Date arrivalTime, Geometry geometry) {
+        public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, String tripId, String routeId, List<EdgeIteratorState> edges, Instant departureTime, List<Stop> stops, double distance, long travelTime, Instant arrivalTime, Geometry geometry) {
             super("pt", stops.get(0).name, departureTime, geometry, distance, arrivalTime);
             this.feedId = feedId;
             this.isInSameVehicleAsPrevious = isInSameVehicleAsPrevious;

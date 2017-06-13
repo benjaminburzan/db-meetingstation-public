@@ -74,13 +74,13 @@ public class TripFromLabel {
                 .map(leg -> (Trip.PtLeg) leg)
                 .findFirst()
                 .ifPresent(firstPtLeg -> {
-                    LocalDateTime firstPtDepartureTime = GtfsHelper.localDateTimeFromDate(firstPtLeg.departureTime);
+                    Instant firstPtDepartureTime = firstPtLeg.departureTime;
                     path.getLegs().stream()
                             .filter(leg -> leg instanceof Trip.PtLeg)
                             .map(leg -> (Trip.PtLeg) leg)
                             .map(ptLeg -> {
                                 final GTFSFeed gtfsFeed = gtfsStorage.getGtfsFeeds().get(ptLeg.feedId);
-                                return new com.graphhopper.gtfs.fare.Trip.Segment(gtfsFeed.trips.get(ptLeg.tripId).route_id, Duration.between(firstPtDepartureTime, GtfsHelper.localDateTimeFromDate(ptLeg.departureTime)).getSeconds(), gtfsFeed.stops.get(ptLeg.stops.get(0).stop_id).zone_id, gtfsFeed.stops.get(ptLeg.stops.get(ptLeg.stops.size() - 1).stop_id).zone_id, ptLeg.stops.stream().map(s -> gtfsFeed.stops.get(s.stop_id).zone_id).collect(Collectors.toSet()));
+                                return new com.graphhopper.gtfs.fare.Trip.Segment(gtfsFeed.trips.get(ptLeg.tripId).route_id, Duration.between(firstPtDepartureTime, ptLeg.departureTime).getSeconds(), gtfsFeed.stops.get(ptLeg.stops.get(0).stop_id).zone_id, gtfsFeed.stops.get(ptLeg.stops.get(ptLeg.stops.size() - 1).stop_id).zone_id, ptLeg.stops.stream().map(s -> gtfsFeed.stops.get(s.stop_id).zone_id).collect(Collectors.toSet()));
                             })
                             .forEach(faresTrip.segments::add);
                     Fares.cheapestFare(gtfsStorage.getFares(), faresTrip)
@@ -184,7 +184,7 @@ public class TripFromLabel {
                 case BOARD:
                     stop = findStop(t);
                     departureTime = t.label.currentTime;
-                    stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), null, Date.from(Instant.ofEpochMilli(departureTime))));
+                    stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), null, Instant.ofEpochMilli(departureTime)));
                     break;
                 case HOP:
                     stop = findStop(t);
@@ -192,7 +192,7 @@ public class TripFromLabel {
                     break;
                 case DWELL:
                     departureTime = t.label.currentTime;
-                    stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), Date.from(Instant.ofEpochMilli(arrivalTimeFromHopEdge)), Date.from(Instant.ofEpochMilli(departureTime))));
+                    stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), Instant.ofEpochMilli(arrivalTimeFromHopEdge), Instant.ofEpochMilli(departureTime)));
                     break;
                 default:
                     throw new RuntimeException();
@@ -206,7 +206,7 @@ public class TripFromLabel {
         }
 
         void finish() {
-            stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), Date.from(Instant.ofEpochMilli(arrivalTimeFromHopEdge)), null));
+            stops.add(new Trip.Stop(stop.stop_id, stop.stop_name, geometryFactory.createPoint(new Coordinate(stop.stop_lon, stop.stop_lat)), Instant.ofEpochMilli(arrivalTimeFromHopEdge), null));
         }
 
     }
@@ -260,11 +260,11 @@ public class TripFromLabel {
                             tripId,
                             trip.route_id,
                             edges(partition).map(edgeLabel -> edgeLabel.edgeIteratorState).collect(Collectors.toList()),
-                            new Date(boardTime),
+                            Instant.ofEpochMilli(boardTime),
                             stops,
                             partition.stream().mapToDouble(t -> t.edge.distance).sum(),
                             path.get(i-1).label.currentTime - boardTime,
-                            new Date(path.get(i-1).label.currentTime),
+                            Instant.ofEpochMilli(path.get(i-1).label.currentTime),
                             lineString));
                     partition = null;
                 }
@@ -284,12 +284,12 @@ public class TripFromLabel {
             final Instant arrivalTime = Instant.ofEpochMilli(path.get(path.size() - 1).label.currentTime);
             return Collections.singletonList(new Trip.WalkLeg(
                     "Walk",
-                    Date.from(departureTime),
+                    departureTime,
                     edges(path).map(edgeLabel -> edgeLabel.edgeIteratorState).collect(Collectors.toList()),
                     lineStringFromEdges(path),
                     edges(path).mapToDouble(edgeLabel -> edgeLabel.distance).sum(),
                     instructions.stream().collect(Collectors.toCollection(() -> new InstructionList(tr))),
-                    Date.from(arrivalTime)));
+                    arrivalTime));
         }
     }
 
