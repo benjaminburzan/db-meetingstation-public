@@ -25,6 +25,8 @@ import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
+import com.graphhopper.util.Translation;
+import com.graphhopper.util.TranslationMap;
 import io.dropwizard.lifecycle.Managed;
 
 import javax.validation.Valid;
@@ -49,6 +51,8 @@ public class MeetingStationService implements Managed {
     private GraphHopperStorage graphHopperStorage;
     private GtfsStorage gtfsStorage;
     private LocationIndex locationIndex;
+    private TripFromLabel tripFromLabel;
+    private TranslationMap translationMap;
 
     @GET
     public Collection<Stop> getStations() {
@@ -117,10 +121,14 @@ public class MeetingStationService implements Managed {
         router.calcPaths(stationNode, Collections.emptySet(), request.departureTime, request.departureTime);
 
         final Map<Integer, Label> tree = router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().min(Comparator.comparingLong(l -> l.currentTime)).get()));
+        Translation tr = translationMap.getWithFallBack(Locale.GERMAN);
         return tree
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(e -> e.getValue().currentTime))
-            .map(e -> new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime), e.getValue().nTransfers > 0 ? Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) : Duration.ZERO)))
+            .map(e -> {
+                tripFromLabel.getTrip(false, ptFlagEncoder, tr, graphHopperStorage, weighting, e.getValue());
+                return new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime), e.getValue().nTransfers > 0 ? Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) : Duration.ZERO));
+            })
             .filter(filter)
             .collect(Collectors.toList());
     }
@@ -137,6 +145,8 @@ public class MeetingStationService implements Managed {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
+        tripFromLabel = new TripFromLabel(gtfsStorage);
+        translationMap = GraphHopperGtfs.createTranslationMap();
     }
 
     @Override
