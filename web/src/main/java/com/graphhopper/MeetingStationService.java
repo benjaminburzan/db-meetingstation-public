@@ -72,10 +72,12 @@ public class MeetingStationService implements Managed {
     class MeetingStationLabel {
         public Instant arrivalTime;
         public Duration travelTime;
+        public Trip trip;
 
-        public MeetingStationLabel(Instant arrivalTime, Duration travelTime) {
+        public MeetingStationLabel(Instant arrivalTime, Duration travelTime, Trip trip) {
             this.arrivalTime = arrivalTime;
             this.travelTime = travelTime;
+            this.trip = trip;
         }
     }
 
@@ -126,8 +128,9 @@ public class MeetingStationService implements Managed {
             .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
             .sorted(Comparator.comparingLong(e -> e.getValue().currentTime))
             .map(e -> {
-                tripFromLabel.getTrip(false, ptFlagEncoder, tr, graphHopperStorage, weighting, e.getValue());
-                return new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime), e.getValue().nTransfers > 0 ? Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) : Duration.ZERO));
+                final Trip trip = new Trip(tripFromLabel.getTrip(false, ptFlagEncoder, tr, graphHopperStorage, weighting, e.getValue()));
+
+                return new StopWithMeetingStationLabel(db.stops.get(stopNodes.get(e.getKey())), new MeetingStationLabel(Instant.ofEpochMilli(e.getValue().currentTime), e.getValue().nTransfers > 0 ? Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) : Duration.ZERO, trip));
             })
             .filter(filter)
             .collect(Collectors.toList());

@@ -13,15 +13,13 @@ public class Trip {
         public final String type;
         public final String departureLocation;
         public final Date departureTime;
-        public final List<EdgeIteratorState> edges;
         public final Geometry geometry;
         public final double distance;
         public final Date arrivalTime;
 
-        public Leg(String type, String departureLocation, Date departureTime, List<EdgeIteratorState> edges, Geometry geometry, double distance, Date arrivalTime) {
+        public Leg(String type, String departureLocation, Date departureTime, Geometry geometry, double distance, Date arrivalTime) {
             this.type = type;
             this.departureLocation = departureLocation;
-            this.edges = edges;
             this.geometry = geometry;
             this.distance = distance;
             this.departureTime = departureTime;
@@ -53,7 +51,7 @@ public class Trip {
         public final InstructionList instructions;
 
         public WalkLeg(String departureLocation, Date departureTime, List<EdgeIteratorState> edges, Geometry geometry, double distance, InstructionList instructions, Date arrivalTime) {
-            super("walk", departureLocation, departureTime, edges, geometry, distance, arrivalTime);
+            super("walk", departureLocation, departureTime, geometry, distance, arrivalTime);
             this.instructions = instructions;
         }
     }
@@ -63,15 +61,13 @@ public class Trip {
         public final String trip_headsign;
         public final long travelTime;
         public final List<Stop> stops;
-        public final Stop boardStop;
         public final String tripId;
         public final String routeId;
 
-        public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, Stop stop, String tripId, String routeId, List<EdgeIteratorState> edges, Date departureTime, List<Stop> stops, double distance, long travelTime, Date arrivalTime, Geometry geometry) {
-            super("pt", stop.name, departureTime, edges, geometry, distance, arrivalTime);
+        public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, String tripId, String routeId, List<EdgeIteratorState> edges, Date departureTime, List<Stop> stops, double distance, long travelTime, Date arrivalTime, Geometry geometry) {
+            super("pt", stops.get(0).name, departureTime, geometry, distance, arrivalTime);
             this.feedId = feedId;
             this.isInSameVehicleAsPrevious = isInSameVehicleAsPrevious;
-            this.boardStop = stop;
             this.tripId = tripId;
             this.routeId = routeId;
             this.trip_headsign = edges.get(0).getName();
@@ -85,4 +81,9 @@ public class Trip {
 
     }
 
+    public final List<Leg> legs;
+
+    public Trip(List<Leg> legs) {
+        this.legs = legs;
+    }
 }

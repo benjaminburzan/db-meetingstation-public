@@ -19,6 +19,7 @@
 package com.graphhopper;
 
 import ch.qos.logback.access.servlet.TeeFilter;
+import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.dropwizard.Application;
@@ -41,6 +42,7 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
         environment.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         environment.getObjectMapper().setSerializationInclusion(NON_NULL);
         environment.getObjectMapper().registerModule(new JavaTimeModule());
+        environment.getObjectMapper().registerModule(new JtsModule());
 
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);

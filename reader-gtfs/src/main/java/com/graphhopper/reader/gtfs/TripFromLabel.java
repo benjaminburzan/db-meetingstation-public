@@ -80,7 +80,7 @@ public class TripFromLabel {
                             .map(leg -> (Trip.PtLeg) leg)
                             .map(ptLeg -> {
                                 final GTFSFeed gtfsFeed = gtfsStorage.getGtfsFeeds().get(ptLeg.feedId);
-                                return new com.graphhopper.gtfs.fare.Trip.Segment(gtfsFeed.trips.get(ptLeg.tripId).route_id, Duration.between(firstPtDepartureTime, GtfsHelper.localDateTimeFromDate(ptLeg.departureTime)).getSeconds(), gtfsFeed.stops.get(ptLeg.boardStop.stop_id).zone_id, gtfsFeed.stops.get(ptLeg.stops.get(ptLeg.stops.size() - 1).stop_id).zone_id, ptLeg.stops.stream().map(s -> gtfsFeed.stops.get(s.stop_id).zone_id).collect(Collectors.toSet()));
+                                return new com.graphhopper.gtfs.fare.Trip.Segment(gtfsFeed.trips.get(ptLeg.tripId).route_id, Duration.between(firstPtDepartureTime, GtfsHelper.localDateTimeFromDate(ptLeg.departureTime)).getSeconds(), gtfsFeed.stops.get(ptLeg.stops.get(0).stop_id).zone_id, gtfsFeed.stops.get(ptLeg.stops.get(ptLeg.stops.size() - 1).stop_id).zone_id, ptLeg.stops.stream().map(s -> gtfsFeed.stops.get(s.stop_id).zone_id).collect(Collectors.toSet()));
                             })
                             .forEach(faresTrip.segments::add);
                     Fares.cheapestFare(gtfsStorage.getFares(), faresTrip)
@@ -147,7 +147,7 @@ public class TripFromLabel {
                 } else {
                     pl = instructions.get(instructions.size()-2).getPoints();
                 }
-                pl.add(ptLeg.boardStop.geometry.getY(), ptLeg.boardStop.geometry.getX());
+                pl.add(ptLeg.stops.get(0).geometry.getY(), ptLeg.stops.get(0).geometry.getX());
                 for (Trip.Stop stop : ptLeg.stops.subList(0, ptLeg.stops.size()-1)) {
                     pl.add(stop.geometry.getY(), stop.geometry.getX());
                 }
@@ -257,7 +257,6 @@ public class TripFromLabel {
                     com.conveyal.gtfs.model.Trip trip = gtfsFeed.trips.get(tripId);
                     result.add(new Trip.PtLeg(
                             feedIdWithTimezone.feedId,partition.get(0).edge.nTransfers == 0,
-                            stops.get(0),
                             tripId,
                             trip.route_id,
                             edges(partition).map(edgeLabel -> edgeLabel.edgeIteratorState).collect(Collectors.toList()),
