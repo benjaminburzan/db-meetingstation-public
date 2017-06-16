@@ -33,16 +33,16 @@ public class Trip {
     }
 
     public static class Stop {
-        @JsonIgnore public final String name;
         @JsonIgnore public final Point geometry;
 
         public final Instant arrivalTime;
         public final String stop_id;
+        public final String stop_name;
         public final Instant departureTime;
 
         public Stop(String stop_id, String name, Point geometry, Instant arrivalTime, Instant departureTime) {
             this.stop_id = stop_id;
-            this.name = name;
+            this.stop_name = name;
             this.geometry = geometry;
             this.arrivalTime = arrivalTime;
             this.departureTime = departureTime;
@@ -66,7 +66,7 @@ public class Trip {
         public final String route_id;
 
         public PtLeg(String feedId, boolean isInSameVehicleAsPrevious, String tripId, String routeId, List<EdgeIteratorState> edges, Instant departureTime, List<Stop> stops, double distance, long travelTime, Instant arrivalTime, Geometry geometry) {
-            super("pt", stops.get(0).name, departureTime, geometry, distance, arrivalTime);
+            super("pt", stops.get(0).stop_name, departureTime, geometry, distance, arrivalTime);
             this.feed_id = feedId;
             this.isInSameVehicleAsPrevious = isInSameVehicleAsPrevious;
             this.trip_id = tripId;
