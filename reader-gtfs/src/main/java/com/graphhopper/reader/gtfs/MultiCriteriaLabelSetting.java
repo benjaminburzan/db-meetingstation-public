@@ -69,17 +69,7 @@ class MultiCriteriaLabelSetting {
                 .thenComparing(Comparator.comparingLong(l1 -> l1.nTransfers))
                 .thenComparing(Comparator.comparingLong(l1 -> l1.nWalkDistanceConstraintViolations))
                 .thenComparing(Comparator.comparingLong(l -> departureTimeCriterion(l) != null ? departureTimeCriterion(l) : 0));
-        fromHeap = new PriorityQueue<>(new Comparator<Label>() {
-            @Override
-            public int compare(Label o1, Label o) {
-                return queueComparator.compare(o1, o);
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                return false;
-            }
-        });
+        fromHeap = new PriorityQueue<>(queueComparator);
         fromMap = HashMultimap.create();
     }
 
