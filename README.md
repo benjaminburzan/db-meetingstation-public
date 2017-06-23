@@ -1,15 +1,17 @@
-Stations API für DB Systel GmbH
+# Stations API für DB Systel GmbH
 
-# Bauen
+Abgezweigt vom [GraphHopper-Repository](https://github.com/graphhopper/graphhopper).
+
+## Bauen
 
 Siehe [Buildfile](Buildfile).
 Hier wird auch der GTFS-Datensatz heruntergeladen. Bitte auf einen eigenen Link anpassen.
 
-# Starten
+## Starten
 
 Siehe [Procfile](Procfile).
 
-# Konfigurieren
+## Konfigurieren
 
 Siehe [meetingstation.yml](meetingstation.yml). Bitte insbesondere den Dateinamen `gtfsFile` an das anpassen, was 
 in [Buildfile](Buildfile) heruntergeladen wird.
