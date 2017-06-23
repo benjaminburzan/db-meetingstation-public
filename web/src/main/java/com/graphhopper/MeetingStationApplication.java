@@ -47,5 +47,7 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
         final MeetingStationService meetingStationService = new MeetingStationService();
         environment.lifecycle().manage(meetingStationService);
         environment.jersey().register(meetingStationService);
+
+        environment.healthChecks().register("stations-database", new MeetingStationHealthCheck(meetingStationService));
     }
 }
