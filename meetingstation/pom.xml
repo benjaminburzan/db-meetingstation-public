@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>meetingstation-web</artifactId>
     <packaging>jar</packaging>
-    <version>0.10-SNAPSHOT</version>
+    <version>0.10.dbms-SNAPSHOT</version>
     <name>Stations API for DB Systel</name>
 
     <parent>
