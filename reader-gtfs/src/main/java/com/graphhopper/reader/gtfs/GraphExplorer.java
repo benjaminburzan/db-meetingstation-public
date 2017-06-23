@@ -49,7 +49,7 @@ public final class GraphExplorer {
 
     Iterable<EdgeIteratorState> exploreEdgesAround(Label label) {
         return new Iterable<EdgeIteratorState>() {
-            EdgeIterator edgeIterator = edgeExplorer.setBaseNode(label.adjNode);
+            EdgeIterator edgeIterator = edgeExplorer.setBaseNode(label.node);
 
             @Override
             public Iterator<EdgeIteratorState> iterator() {
@@ -64,6 +64,12 @@ public final class GraphExplorer {
                                 continue;
                             }
                             if (realtimeFeed.isBlocked(edgeIterator.getEdge())) {
+                                continue;
+                            }
+                            if (edgeType == GtfsStorage.EdgeType.WAIT_ARRIVAL && !reverse) {
+                                continue;
+                            }
+                            if (edgeType == GtfsStorage.EdgeType.WAIT && reverse) {
                                 continue;
                             }
                             if (edgeType == GtfsStorage.EdgeType.ENTER_TIME_EXPANDED_NETWORK && !reverse) {
@@ -137,11 +143,7 @@ public final class GraphExplorer {
             final int validityId = flagEncoder.getValidityId(edge.getFlags());
             final GtfsStorage.Validity validity = gtfsStorage.getValidities().get(validityId);
             final int trafficDay = (int) ChronoUnit.DAYS.between(validity.start, Instant.ofEpochMilli(instant).atZone(validity.zoneId).toLocalDate());
-            if (trafficDay < 0) {
-                return false;
-            } else {
-                return validity.validity.get(trafficDay);
-            }
+            return trafficDay >= 0 && validity.validity.get(trafficDay);
         } else {
             return true;
         }

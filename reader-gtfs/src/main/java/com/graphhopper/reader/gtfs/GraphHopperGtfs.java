@@ -36,9 +36,12 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
-import static com.graphhopper.util.Parameters.PT.RANGE_QUERY_END_TIME;
+import static com.graphhopper.reader.gtfs.Label.reverseEdges;
+import static com.graphhopper.util.Parameters.PT.PROFILE_QUERY;
 
 public final class GraphHopperGtfs implements GraphHopperAPI {
 
@@ -81,8 +84,9 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
 
     private class RequestHandler {
         private final int maxVisitedNodesForRequest;
+        private final int limitSolutions;
         private final Instant initialTime;
-        private final Instant rangeQueryEndTime;
+        private final boolean profileQuery;
         private final boolean arriveBy;
         private final boolean ignoreTransfers;
         private final double walkSpeedKmH;
@@ -98,15 +102,16 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
 
         RequestHandler(GHRequest request) {
             maxVisitedNodesForRequest = request.getHints().getInt(Parameters.Routing.MAX_VISITED_NODES, Integer.MAX_VALUE);
+            profileQuery = request.getHints().getBool(PROFILE_QUERY, false);
+            ignoreTransfers = request.getHints().getBool(Parameters.PT.IGNORE_TRANSFERS, false);
+            limitSolutions = request.getHints().getInt(Parameters.PT.LIMIT_SOLUTIONS, profileQuery ? 5 : ignoreTransfers ? 1 : Integer.MAX_VALUE);
             final String departureTimeString = request.getHints().get(Parameters.PT.EARLIEST_DEPARTURE_TIME, "");
             try {
                 initialTime = Instant.parse(departureTimeString);
             } catch (DateTimeParseException e) {
                 throw new IllegalArgumentException(String.format("Illegal value for required parameter %s: [%s]", Parameters.PT.EARLIEST_DEPARTURE_TIME, departureTimeString));
             }
-            rangeQueryEndTime = request.getHints().has(Parameters.PT.RANGE_QUERY_END_TIME) ? Instant.parse(request.getHints().get(RANGE_QUERY_END_TIME, "")) : initialTime;
             arriveBy = request.getHints().getBool(Parameters.PT.ARRIVE_BY, false);
-            ignoreTransfers = request.getHints().getBool(Parameters.PT.IGNORE_TRANSFERS, false);
             walkSpeedKmH = request.getHints().getDouble(Parameters.PT.WALK_SPEED, 5.0);
             maxWalkDistancePerLeg = request.getHints().getDouble(Parameters.PT.MAX_WALK_DISTANCE_PER_LEG, Double.MAX_VALUE);
             maxTransferDistancePerLeg = request.getHints().getDouble(Parameters.PT.MAX_TRANSFER_DISTANCE_PER_LEG, Double.MAX_VALUE);
@@ -138,7 +143,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
                 startNode = source.getClosestNode();
                 destNode = dest.getClosestNode();
             }
-            Set<Label> solutions = findPaths(startNode, destNode);
+            List<Label> solutions = findPaths(startNode, destNode);
             parseSolutionsAndAddToResponse(solutions, startAndEndpoint);
             return response;
         }
@@ -151,18 +156,20 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
             return source;
         }
 
-        private void parseSolutionsAndAddToResponse(Set<Label> solutions, PointList waypoints) {
+        private void parseSolutionsAndAddToResponse(List<Label> solutions, PointList waypoints) {
             for (Label solution : solutions) {
                 response.add(tripFromLabel.parseSolutionIntoPath(initialTime, arriveBy, flagEncoder, translation, queryGraph, weighting, solution, waypoints));
             }
             response.getAll().sort(Comparator.comparingDouble(PathWrapper::getTime));
         }
 
-        private Set<Label> findPaths(int startNode, int destNode) {
+        private List<Label> findPaths(int startNode, int destNode) {
             StopWatch stopWatch = new StopWatch().start();
             GraphExplorer graphExplorer = new GraphExplorer(queryGraph, weighting, flagEncoder, gtfsStorage, realtimeFeed, arriveBy);
-            MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(graphExplorer, weighting, arriveBy, maxWalkDistancePerLeg, maxTransferDistancePerLeg, !ignoreTransfers, maxVisitedNodesForRequest, nEdge -> {}, () -> true);
-            Set<Label> solutions = router.calcPaths(startNode, Collections.singleton(destNode), initialTime, rangeQueryEndTime);
+            MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(graphExplorer, weighting, arriveBy, maxWalkDistancePerLeg, maxTransferDistancePerLeg, !ignoreTransfers, profileQuery, maxVisitedNodesForRequest);
+            List<Label> solutions = router.calcPaths(startNode, destNode, initialTime)
+                    .limit(limitSolutions)
+                    .collect(Collectors.toList());
             response.addDebugInfo("routing:" + stopWatch.stop().getSeconds() + "s");
             if (router.getVisitedNodes() >= maxVisitedNodesForRequest) {
                 throw new IllegalArgumentException("No path found - maximum number of nodes exceeded: " + maxVisitedNodesForRequest);
@@ -174,7 +181,6 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
             }
             return solutions;
         }
-
     }
 
     public GraphHopperGtfs(PtFlagEncoder flagEncoder, TranslationMap translationMap, GraphHopperStorage graphHopperStorage, LocationIndex locationIndex, GtfsStorage gtfsStorage, RealtimeFeed realtimeFeed) {

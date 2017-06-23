@@ -1,1 +1,1 @@
-web: java -Xmx1024m -jar web/target/graphhopper-web-0.9-SNAPSHOT.jar server meetingstation.yml
+web: java -Xmx1024m -jar web/target/graphhopper-web-0.10-SNAPSHOT.jar server meetingstation.yml

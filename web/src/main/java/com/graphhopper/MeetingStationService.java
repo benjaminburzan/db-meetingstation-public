@@ -93,8 +93,6 @@ public class MeetingStationService implements Managed {
         public boolean includePlans = false;
     }
 
-
-
     @POST
     public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
@@ -107,11 +105,11 @@ public class MeetingStationService implements Managed {
             filter = label -> true;
         }
 
-        Set<Integer> visitedNodes = new HashSet<>();
+        Set<String> visitedNodes = new HashSet<>();
         final Supplier<Boolean> goOn;
         if (request.targetStations != null) {
-            final Set<Integer> targetIds = request.targetStations.stream().map(targetStation -> gtfsStorage.getStationNodes().get(targetStation.stop_id)).collect(Collectors.toSet());
-            goOn = () -> !visitedNodes.containsAll(targetIds);
+            final Set<String> targetStations = request.targetStations.stream().map(targetStation -> targetStation.stop_id).collect(Collectors.toSet());
+            goOn = () -> !visitedNodes.containsAll(targetStations);
         } else {
             goOn = () -> true;
         }
@@ -120,27 +118,29 @@ public class MeetingStationService implements Managed {
             throw new BadRequestException(String.format("station id %s not found", request.sourceStation.stop_id));
         }
         final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
-        final MultiCriteriaLabelSetting.Visitor visitor = nEdge -> visitedNodes.add(nEdge.adjNode);
-        final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, false, Integer.MAX_VALUE, visitor, goOn);
-        router.calcPaths(stationNode, Collections.emptySet(), request.departureTime, request.departureTime);
-
-        final Map<Integer, Label> tree = router.fromMap.asMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().min(Comparator.comparingLong(l -> l.currentTime)).get()));
-        Translation tr = translationMap.getWithFallBack(Locale.GERMAN);
-        return tree
-            .entrySet().stream().filter(e -> stopNodes.containsKey(e.getKey()))
-            .sorted(Comparator.comparingLong(e -> e.getValue().currentTime))
-            .map(e -> new StopWithMeetingStationLabel(
-                    db.stops.get(stopNodes.get(e.getKey())),
-                    new MeetingStationLabel(Instant.ofEpochMilli(
-                            e.getValue().currentTime),
-                            e.getValue().nTransfers > 0 ?
-                                    Duration.between(Instant.ofEpochMilli(e.getValue().firstPtDepartureTime), Instant.ofEpochMilli(e.getValue().currentTime)) :
-                                    Duration.ZERO),
-                    request.includePlans ?
-                            new Trip(tripFromLabel.getTrip(false, ptFlagEncoder, tr, graphHopperStorage, weighting, e.getValue())) :
-                            null))
-            .filter(filter)
-            .collect(Collectors.toList());
+        final Translation tr = translationMap.getWithFallBack(Locale.GERMAN);
+        final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, false, false, Integer.MAX_VALUE);
+        final Iterator<StopWithMeetingStationLabel> labelStream = router.getLabelStream(stationNode, -1, request.departureTime)
+                .filter(label -> stopNodes.containsKey(label.node))
+                .map(label -> new StopWithMeetingStationLabel(
+                        db.stops.get(stopNodes.get(label.node)),
+                        new MeetingStationLabel(Instant.ofEpochMilli(
+                                label.currentTime),
+                                label.nTransfers > 0 ?
+                                        Duration.between(Instant.ofEpochMilli(label.departureTime), Instant.ofEpochMilli(label.currentTime)) :
+                                        Duration.ZERO),
+                        request.includePlans ?
+                                new Trip(tripFromLabel.getTrip(false, ptFlagEncoder, tr, graphHopperStorage, weighting, label)) :
+                                null))
+                .filter(filter)
+                .iterator();
+        List<StopWithMeetingStationLabel> response = new ArrayList<>();
+        while (labelStream.hasNext() && goOn.get()) {
+            final StopWithMeetingStationLabel label = labelStream.next();
+            visitedNodes.add(label.stop.stop_id);
+            response.add(label);
+        }
+        return response;
     }
 
     @Override
