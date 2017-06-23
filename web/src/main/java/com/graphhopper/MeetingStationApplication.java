@@ -18,16 +18,11 @@
 
 package com.graphhopper;
 
-import ch.qos.logback.access.servlet.TeeFilter;
 import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;
-import org.glassfish.jersey.logging.LoggingFeature;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
@@ -38,13 +33,13 @@ public class MeetingStationApplication extends Application<MeetingStationConfigu
     }
 
     @Override
-    public void run(MeetingStationConfiguration meetingStationConfiguration, Environment environment) throws Exception {
+    public void run(MeetingStationConfiguration configuration, Environment environment) throws Exception {
         environment.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         environment.getObjectMapper().setSerializationInclusion(NON_NULL);
         environment.getObjectMapper().registerModule(new JavaTimeModule());
         environment.getObjectMapper().registerModule(new JtsModule());
 
-        final MeetingStationService meetingStationService = new MeetingStationService();
+        final MeetingStationService meetingStationService = new MeetingStationService(configuration);
         environment.lifecycle().manage(meetingStationService);
         environment.jersey().register(meetingStationService);
 

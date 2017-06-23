@@ -38,13 +38,14 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
 @Path("stations")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MeetingStationService implements Managed {
+
+    private final MeetingStationConfiguration configuration;
 
     private PtFlagEncoder ptFlagEncoder;
     private Map<Integer, String> stopNodes;
@@ -53,6 +54,10 @@ public class MeetingStationService implements Managed {
     private LocationIndex locationIndex;
     private TripFromLabel tripFromLabel;
     private TranslationMap translationMap;
+
+    MeetingStationService(MeetingStationConfiguration configuration) {
+        this.configuration = configuration;
+    }
 
     @GET
     public Collection<Stop> getStations() {
@@ -88,6 +93,8 @@ public class MeetingStationService implements Managed {
         public boolean includePlans = false;
     }
 
+
+
     @POST
     public List<StopWithMeetingStationLabel> getStations(@Valid StationRequest request) {
         final GTFSFeed db = gtfsStorage.getGtfsFeeds().get("gtfs_0");
@@ -113,12 +120,7 @@ public class MeetingStationService implements Managed {
             throw new BadRequestException(String.format("station id %s not found", request.sourceStation.stop_id));
         }
         final PtTravelTimeWeighting weighting = new PtTravelTimeWeighting(ptFlagEncoder, 0.0);
-        final MultiCriteriaLabelSetting.Visitor visitor = new MultiCriteriaLabelSetting.Visitor() {
-            @Override
-            public void visit(Label nEdge) {
-                visitedNodes.add(nEdge.adjNode);
-            }
-        };
+        final MultiCriteriaLabelSetting.Visitor visitor = nEdge -> visitedNodes.add(nEdge.adjNode);
         final MultiCriteriaLabelSetting router = new MultiCriteriaLabelSetting(new GraphExplorer(graphHopperStorage, weighting, ptFlagEncoder, gtfsStorage, RealtimeFeed.empty(), false), weighting, false, Double.MAX_VALUE, Double.MAX_VALUE, false, Integer.MAX_VALUE, visitor, goOn);
         router.calcPaths(stationNode, Collections.emptySet(), request.departureTime, request.departureTime);
 
@@ -145,9 +147,9 @@ public class MeetingStationService implements Managed {
     public void start() throws Exception {
         ptFlagEncoder = new PtFlagEncoder();
         EncodingManager encodingManager = new EncodingManager(Arrays.asList(ptFlagEncoder), 8);
-        GHDirectory directory = GraphHopperGtfs.createGHDirectory("target/db");
+        GHDirectory directory = GraphHopperGtfs.createGHDirectory(configuration.getGraphLocation());
         gtfsStorage = GraphHopperGtfs.createGtfsStorage();
-        graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList("2017.zip"), Collections.emptyList());
+        graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, ptFlagEncoder, gtfsStorage, false, Collections.singletonList(configuration.getGtfsFile()), Collections.emptyList());
         locationIndex = GraphHopperGtfs.createOrLoadIndex(directory, graphHopperStorage);
         stopNodes = gtfsStorage.getStationNodes().entrySet()
                 .stream()

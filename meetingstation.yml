@@ -1,3 +1,6 @@
+graphLocation: graph-db
+gtfsFile: 2017.zip
+
 server:
   minThreads: 1
   maxThreads: 10
