@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
-        <version>0.10-SNAPSHOT</version>
+        <version>0.10.dbms-SNAPSHOT</version>
     </parent>
     <properties>
         <dropwizard.version>1.1.0</dropwizard.version>
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>com.graphhopper</groupId>
             <artifactId>graphhopper-reader-gtfs</artifactId>
-            <version>0.10-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>com.vividsolutions</groupId>
