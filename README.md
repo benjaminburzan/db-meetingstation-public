@@ -1,4 +1,4 @@
-Stations API for DB Systel GmbH
+Stations API für DB Systel GmbH
 
 # Bauen
 
