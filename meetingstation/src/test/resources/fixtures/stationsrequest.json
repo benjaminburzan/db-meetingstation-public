@@ -1,0 +1,10 @@
+{
+  "includePlans": "true",
+  "sourceStation": { "stop_id": "8000025", "stop_name": "Bamberg" },
+  "departureTime": 1496073180,
+  "targetStations": [
+    { "stop_id": "8000025", "stop_name": "Bamberg" },
+    { "stop_id": "8000026", "stop_name": "Basel Bad Bf"},
+    { "stop_id": "8000879", "stop_name": "Bad Bentheim"}
+  ]
+}
